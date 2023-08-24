@@ -1,45 +1,48 @@
 #include "monty.h"
-bus_t bus = {NULL, NULL, NULL, 0};
-/**
-* main - monty code interpreter
-* @argc: number of arguments
-* @argv: monty file location
-* Return: 0 on success
-*/
-int main(int argc, char *argv[])
-{
-	char *content;
-	FILE *file;
-	size_t size = 0;
-	ssize_t read_line = 1;
-	stack_t *stack = NULL;
-	unsigned int counter = 0;
 
-	if (argc != 2)
+dlist_t gs;
+/**
+  * dlist_destroy - closes file descripter and frees buffer
+  */
+void dlist_destroy(void)
+{
+	while (gs.size > 0) /* remove each element */
+		dlist_remove(gs.tail);
+	if (gs.fd != NULL)
+		fclose(gs.fd);
+	if (gs.buffer != NULL)
+		free(gs.buffer);
+}
+/**
+  * main - monty bytecode interpreter
+  * @ac: argument count
+  * @av: argument variables entered from the command line
+  * Return: 0 on success
+  */
+
+int main(int ac, char **av)
+{
+	FILE *FD;
+	char *buffer = NULL;
+	ssize_t glcount = 0;
+	size_t bufflen = 0;
+
+	dlist_init();
+	if (ac != 2)
+		myexit(-1, NULL);
+	FD = fopen(av[1], "r");
+	if (FD == NULL)
+		myexit(-2, av[1]);
+	gs.fd = FD;
+	while (glcount != -1)
 	{
-		fprintf(stderr, "USAGE: monty file\n");
-		exit(EXIT_FAILURE);
+		gs.ln++;
+		glcount = getline(&buffer, &bufflen, FD);
+		if (glcount == -1)
+			break;
+		gs.buffer = buffer;
+		run_opcode(buffer);
 	}
-	file = fopen(argv[1], "r");
-	bus.file = file;
-	if (!file)
-	{
-		fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
-		exit(EXIT_FAILURE);
-	}
-	while (read_line > 0)
-	{
-		content = NULL;
-		read_line = getline(&content, &size, file);
-		bus.content = content;
-		counter++;
-		if (read_line > 0)
-		{
-			execute(content, &stack, counter, file);
-		}
-		free(content);
-	}
-	free_stack(stack);
-	fclose(file);
-return (0);
+	dlist_destroy();
+	return (EXIT_SUCCESS);
 }
